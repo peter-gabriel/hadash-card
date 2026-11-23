@@ -89,7 +89,7 @@ function toFloors(cfg: CardConfig): FloorConfig[] {
   return src;
 }
 
-export class HadashEditor extends LitElement {
+export class OmniumHome3dEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
     initial: { attribute: false },
@@ -1774,4 +1774,4 @@ async function downscale(file: File, max: number): Promise<string> {
   return c.toDataURL('image/jpeg', 0.82);
 }
 
-if (!customElements.get('hadash-editor')) customElements.define('hadash-editor', HadashEditor);
+if (!customElements.get('omnium-home-3d-editor')) customElements.define('omnium-home-3d-editor', OmniumHome3dEditor);

@@ -1,12 +1,12 @@
 {
-  "name": "hadash-card",
-  "version": "0.2.0",
+  "name": "omnium-home-3d",
+  "version": "0.3.0",
   "description": "Home Assistant card: your home in 3D for a wall tablet, with touch rotate/zoom, live lights, sky and weather, a floor plan editor, area sync, actions and music",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/peter-gabriel/hadash-card.git"
+    "url": "https://github.com/peter-gabriel/omnium-home-3d.git"
   },
   "keywords": [
     "home-assistant",
@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "lit": "^3.3.3",
-    "spotify-panel-card": "github:peter-gabriel/spotify-panel-card#v0.1.0",
+    "omnium-music": "github:peter-gabriel/omnium-music#v0.2.0",
     "three": "^0.187.0"
   },
   "devDependencies": {

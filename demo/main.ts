@@ -1,5 +1,5 @@
 // HA falso para desenvolver sem o Home Assistant: `npm run dev`
-import '../src/hadash-card';
+import '../src/omnium-home-3d';
 import type { Hass, HassEntity } from '../src/types';
 import { DEMO_FLOORS } from '../src/house';
 
@@ -321,7 +321,7 @@ function push() {
 }
 
 card.setConfig({
-  type: 'custom:hadash-card',
+  type: 'custom:omnium-home-3d',
   height: '100vh',
   title: 'Casa (demo)',
   show_coords: true,

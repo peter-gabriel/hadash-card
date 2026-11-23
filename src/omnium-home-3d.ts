@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { buildFloors, DEMO_FLOORS, roomLabel, type Device, type Floor, type Room } from './house';
 import { HouseScene, type FloorSel } from './scene';
-import 'spotify-panel-card/panel';
+import 'omnium-music/panel';
 import { speakerIsCurrent, tapService } from './states';
 import { computeSky, weatherIcon, type Sky } from './sky';
 import { setLanguage, t as L } from './i18n';
@@ -9,10 +9,10 @@ import { listActions, loadTargets, runAction, type ActionItem, type ActionTarget
 import './editor';
 import type { CardConfig, Hass, HassEntity, Vec2 } from './types';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 
-class HadashCard extends LitElement {
+class OmniumHome3d extends LitElement {
   static properties = {
     _focused: { state: true },
     _floor: { state: true },
@@ -349,7 +349,7 @@ class HadashCard extends LitElement {
     this._musicOpen = false;
   }
 
-  /** erros do painel de música viram o toast do HADash */
+  /** erros do painel de música viram o toast do card */
   private _onPanelNote(e: CustomEvent<{ message: string }>) {
     e.stopPropagation();
     this._showToast(e.detail.message);
@@ -359,14 +359,14 @@ class HadashCard extends LitElement {
   private _renderNowPlaying() {
     const m = this._config.music;
     if (!m?.entity || m.now_playing === false || this._musicOpen) return nothing;
-    return html`<spotify-panel
+    return html`<omnium-music-panel
       class="np-host"
       mode="mini"
       .hass=${this._hass}
       entity=${m.entity}
-      @spotify-panel-open=${this._openMusic}
+      @omnium-music-open=${this._openMusic}
       @hass-notification=${this._onPanelNote}
-    ></spotify-panel>`;
+    ></omnium-music-panel>`;
   }
 
   // ---------- editor de planta ----------
@@ -671,26 +671,26 @@ class HadashCard extends LitElement {
         ${this._musicOpen
           ? html`<div class="sheet" @pointerdown=${() => this._kickIdle()}>
               <button class="close" @click=${this._closeMusic} title=${L().close}>${ICON_CLOSE}</button>
-              <spotify-panel
+              <omnium-music-panel
                 class="sheet-body"
                 mode="full"
                 .hass=${this._hass}
                 entity=${this._config.music?.entity ?? ''}
                 .card=${this._config.music?.card}
                 @hass-notification=${this._onPanelNote}
-              ></spotify-panel>
+              ></omnium-music-panel>
             </div>`
           : nothing}
 
         ${this._editing
-          ? html`<hadash-editor
+          ? html`<omnium-home-3d-editor
               style=${this._previewing ? 'display:none' : ''}
               .hass=${this._hass}
               .initial=${this._editBase}
               @editor-close=${this._closeEditor}
               @editor-preview=${(e: CustomEvent) => this._preview(e.detail)}
               @editor-save=${(e: CustomEvent) => this._saveConfig(e.detail)}
-            ></hadash-editor>`
+            ></omnium-home-3d-editor>`
           : nothing}
         ${this._previewing
           ? html`<div class="previewbar">
@@ -698,7 +698,7 @@ class HadashCard extends LitElement {
               <button @click=${() => (this._previewing = false)}>${L().backToEditor}</button>
               <button
                 class="primary"
-                @click=${() => this._saveConfig((this.renderRoot.querySelector('hadash-editor') as any).buildConfig())}
+                @click=${() => this._saveConfig((this.renderRoot.querySelector('omnium-home-3d-editor') as any).buildConfig())}
               >
                 ${L().save}
               </button>
@@ -735,7 +735,7 @@ class HadashCard extends LitElement {
       font-family: var(--paper-font-body1_-_font-family, system-ui, -apple-system, sans-serif);
     }
     .card {
-      container: hadash / inline-size;
+      container: home3d / inline-size;
       position: relative;
       overflow: hidden;
       border-radius: var(--ha-card-border-radius, 16px);
@@ -1370,7 +1370,7 @@ class HadashCard extends LitElement {
     .dock button:active {
       background: rgba(255, 255, 255, 0.12);
     }
-    @container hadash (max-width: 900px) {
+    @container home3d (max-width: 900px) {
       .dock span {
         display: none;
       }
@@ -1587,7 +1587,7 @@ class HadashCard extends LitElement {
       font-size: 16px;
       font-variant-numeric: tabular-nums;
     }
-    hadash-editor {
+    omnium-home-3d-editor {
       position: absolute;
       inset: 0;
       z-index: 20;
@@ -1709,7 +1709,7 @@ async function saveCardConfig(hass: Hass | undefined, oldCfg: CardConfig, newCfg
   const url_path = !seg || seg === 'lovelace' ? null : seg;
   const conf = await hass.callWS<Record<string, unknown>>({ type: 'lovelace/config', url_path });
   const target = JSON.stringify(oldCfg);
-  // todos os HADash do dashboard (em qualquer nível: views, sections, stacks)
+  // todos os card do dashboard (em qualquer nível: views, sections, stacks)
   const slots: { list: unknown[]; i: number; same: boolean }[] = [];
   const walk = (node: unknown) => {
     if (Array.isArray(node)) {
@@ -1721,7 +1721,7 @@ async function saveCardConfig(hass: Hass | undefined, oldCfg: CardConfig, newCfg
     } else if (node && typeof node === 'object') for (const v of Object.values(node)) walk(v);
   };
   walk(conf);
-  // um HADash só: é ele; vários: o que tem a config idêntica à de antes; senão não arrisca salvar no lugar errado
+  // um card só: é ele; vários: o que tem a config idêntica à de antes; senão não arrisca salvar no lugar errado
   const hit = slots.length === 1 ? slots[0] : slots.filter((x) => x.same).length === 1 ? slots.find((x) => x.same) : undefined;
   if (!hit) throw new Error(L().errCardNotFound(slots.length));
   hit.list[hit.i] = newCfg;
@@ -1729,12 +1729,12 @@ async function saveCardConfig(hass: Hass | undefined, oldCfg: CardConfig, newCfg
 }
 
 
-if (!customElements.get('hadash-card')) {
-  customElements.define('hadash-card', HadashCard);
+if (!customElements.get('omnium-home-3d')) {
+  customElements.define('omnium-home-3d', OmniumHome3d);
   ((window as any).customCards ??= []).push({
-    type: 'hadash-card',
-    name: 'HADash 3D',
+    type: 'omnium-home-3d',
+    name: 'Omnium Home 3D',
     description: L().cardDescription,
   });
-  console.info(`%cHADASH-CARD ${VERSION}`, 'color:#ffb45c;font-weight:bold');
+  console.info(`%cOMNIUM-HOME-3D ${VERSION}`, 'color:#ffb45c;font-weight:bold');
 }
