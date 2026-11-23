@@ -9,7 +9,7 @@ import { listActions, loadTargets, runAction, type ActionItem, type ActionTarget
 import './editor';
 import type { CardConfig, Hass, HassEntity, Vec2 } from './types';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 
 class OmniumHome3d extends LitElement {
