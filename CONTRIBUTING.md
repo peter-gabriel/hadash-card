@@ -19,16 +19,16 @@ Nothing is pushed straight to `main` or `develop`: every change goes through a p
 ```bash
 npm install
 npm test          # sky, geometry, area sync, action and i18n tests
-npm run build     # outputs dist/hadash-card.js
+npm run build     # outputs dist/omnium-home-3d.js
 npm run dev       # demo with a fake Home Assistant on http://localhost:5181 (?lang=en, pt-BR or es)
-npm run ha        # rebuild on change and serve on http://<your-machine-ip>:5182/hadash-card.js
+npm run ha        # rebuild on change and serve on http://<your-machine-ip>:5182/omnium-home-3d.js
 ```
 
 To try your build in Home Assistant, add the `npm run ha` URL as a dashboard resource on a test dashboard. Then refresh HA after each change.
 
 UI strings live in [`src/i18n.ts`](src/i18n.ts). Please add every new string to all languages (English, Brazilian Portuguese and Spanish).
 
-The music panel comes from [spotify-panel-card](https://github.com/peter-gabriel/spotify-panel-card) as an npm dependency pinned to a release tag. To work on both at once, point the dependency at a local checkout (`npm i ../spotify-panel-card`) and do not commit that change.
+The music panel comes from [omnium-music](https://github.com/peter-gabriel/omnium-music) as an npm dependency pinned to a release tag. To work on both at once, point the dependency at a local checkout (`npm i ../omnium-music`) and do not commit that change.
 
 ## Releasing
 
@@ -40,5 +40,5 @@ The music panel comes from [spotify-panel-card](https://github.com/peter-gabriel
 4. Publish a GitHub release with the tag `vX.Y.Z` on `main`. The **Release** workflow then:
    - checks that the tag matches `package.json`;
    - runs the tests and builds the card;
-   - attaches `hadash-card.js` to the release, which is the file HACS installs.
+   - attaches `omnium-home-3d.js` to the release, which is the file HACS installs.
 5. Merge `main` back into `develop`, through a PR.

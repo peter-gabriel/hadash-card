@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>HADash demo</title>
+    <title>Omnium Home 3D demo</title>
     <style>
       html, body { margin: 0; height: 100%; background: #111318; overflow: hidden; }
-      hadash-card { height: 100%; }
+      omnium-home-3d { height: 100%; }
       #panel { position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px; display: flex; gap: 6px; font: 12px system-ui; }
       #panel button { padding: 6px 10px; border-radius: 8px; border: 0; background: #2c313a; color: #ddd; }
     </style>
   </head>
   <body>
-    <hadash-card id="card"></hadash-card>
+    <omnium-home-3d id="card"></omnium-home-3d>
     <div id="panel"><button id="night">hora: dia</button><button id="weather">tempo: partlycloudy</button><button id="motion">movimento</button></div>
     <script type="module" src="/demo/main.ts"></script>
   </body>
