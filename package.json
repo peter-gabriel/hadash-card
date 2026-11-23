@@ -1,6 +1,6 @@
 {
   "name": "omnium-home-3d",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Home Assistant card: your home in 3D for a wall tablet, with touch rotate/zoom, live lights, sky and weather, a floor plan editor, area sync, actions and music",
   "type": "module",
   "license": "MIT",
