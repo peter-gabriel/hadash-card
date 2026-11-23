@@ -44,7 +44,7 @@ const en = {
   copy: 'Copy',
   copied: 'Copied',
   errNoHa: 'no Home Assistant connection',
-  errCardNotFound: (n: number) => `card not identified (${n} HADash cards on the dashboard)`,
+  errCardNotFound: (n: number) => `card not identified (${n} Omnium Home 3D cards on the dashboard)`,
   cardDescription: 'Your home in 3D: rotate and zoom with your fingers, tap to switch things on and off',
 
   // last run
@@ -111,7 +111,7 @@ const en = {
 
   // plan
   room: 'Room',
-  errRoomShape: (name: string) => `hadash-card: room "${name}" needs \`rect\` or \`polygon\`.`,
+  errRoomShape: (name: string) => `omnium-home-3d: room "${name}" needs \`rect\` or \`polygon\`.`,
   defaultFloor: 'Ground floor',
   upperFloor: 'Upper floor',
   floorN: (n: number) => `Floor ${n}`,
@@ -333,7 +333,7 @@ const pt: Strings = {
   copy: 'Copiar',
   copied: 'Copiado',
   errNoHa: 'sem conexão com o HA',
-  errCardNotFound: (n) => `card não identificado (${n} HADash no dashboard)`,
+  errCardNotFound: (n) => `card não identificado (${n} Omnium Home 3D no dashboard)`,
   cardDescription: 'Casa em 3D: gire e dê zoom com os dedos, toque para ligar/desligar',
 
   never: 'nunca',
@@ -395,7 +395,7 @@ const pt: Strings = {
   syncErrAreaFloor: (name, msg) => `Área "${name}" no andar: ${msg}`,
 
   room: 'Cômodo',
-  errRoomShape: (name) => `hadash-card: cômodo "${name}" precisa de \`rect\` ou \`polygon\`.`,
+  errRoomShape: (name) => `omnium-home-3d: cômodo "${name}" precisa de \`rect\` ou \`polygon\`.`,
   defaultFloor: 'Térreo',
   upperFloor: 'Superior',
   floorN: (n) => `Piso ${n}`,
@@ -593,7 +593,7 @@ const es: Strings = {
   copy: 'Copiar',
   copied: 'Copiado',
   errNoHa: 'sin conexión con Home Assistant',
-  errCardNotFound: (n) => `tarjeta no identificada (${n} HADash en el panel)`,
+  errCardNotFound: (n) => `tarjeta no identificada (${n} Omnium Home 3D en el panel)`,
   cardDescription: 'Tu casa en 3D: gira y haz zoom con los dedos, toca para encender y apagar',
 
   never: 'nunca',
@@ -655,7 +655,7 @@ const es: Strings = {
   syncErrAreaFloor: (name, msg) => `Área "${name}" en su planta: ${msg}`,
 
   room: 'Habitación',
-  errRoomShape: (name) => `hadash-card: la habitación "${name}" necesita \`rect\` o \`polygon\`.`,
+  errRoomShape: (name) => `omnium-home-3d: la habitación "${name}" necesita \`rect\` o \`polygon\`.`,
   defaultFloor: 'Planta baja',
   upperFloor: 'Planta alta',
   floorN: (n) => `Planta ${n}`,

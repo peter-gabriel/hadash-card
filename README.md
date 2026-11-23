@@ -1,8 +1,8 @@
-# HADash 3D Card
+# Omnium Home 3D
 
 A Home Assistant Lovelace card that shows your home in **3D**, made for a tablet on the wall. Rotate and zoom with your fingers, tap a light to switch it, and see the real sky and weather behind the house.
 
-![HADash: a two-floor house in 3D with lit rooms, the sky, the weather and the now-playing widget](https://raw.githubusercontent.com/peter-gabriel/hadash-card/main/docs/screenshot.png)
+![Omnium Home 3D: a two-floor house in 3D with lit rooms, the sky, the weather and the now-playing widget](https://raw.githubusercontent.com/peter-gabriel/omnium-home-3d/main/docs/screenshot.png)
 
 *Screenshots use a fictional house, devices and songs.*
 
@@ -21,7 +21,7 @@ A Home Assistant Lovelace card that shows your home in **3D**, made for a tablet
 - **Battery friendly:** the scene is only redrawn when something changes.
 - **Localized:** Brazilian Portuguese, Spanish and English, following your Home Assistant language. Anything else falls back to English. The example house is translated too.
 
-![The actions panel with the routines of the selected room](https://raw.githubusercontent.com/peter-gabriel/hadash-card/main/docs/actions.png)
+![The actions panel with the routines of the selected room](https://raw.githubusercontent.com/peter-gabriel/omnium-home-3d/main/docs/actions.png)
 
 ## Installation
 
@@ -30,26 +30,26 @@ The card is not in the default store yet, so you add it by its GitHub link. Upda
 ### Marketplace (newer Home Assistant versions)
 
 1. Open **Marketplace** in the sidebar and click **Add from link** (top right).
-2. Paste `https://github.com/peter-gabriel/hadash-card` and click **Add**.
-3. Search for **HADash 3D Card**, open it and click **Install**.
+2. Paste `https://github.com/peter-gabriel/omnium-home-3d` and click **Add**.
+3. Search for **Omnium Home 3D**, open it and click **Install**.
 4. Reload the browser when asked.
 
 The Marketplace adds the dashboard resource for you.
 
 ### HACS
 
-1. In HACS → ⋮ → **Custom repositories**, add `https://github.com/peter-gabriel/hadash-card` with the type **Dashboard**.
-2. Search for **HADash 3D Card**, download it, and reload the browser.
+1. In HACS → ⋮ → **Custom repositories**, add `https://github.com/peter-gabriel/omnium-home-3d` with the type **Dashboard**.
+2. Search for **Omnium Home 3D**, download it, and reload the browser.
 
 HACS adds the dashboard resource for you.
 
 ### Manual
 
-1. Download `hadash-card.js` from the [latest release](https://github.com/peter-gabriel/hadash-card/releases/latest).
+1. Download `omnium-home-3d.js` from the [latest release](https://github.com/peter-gabriel/omnium-home-3d/releases/latest).
 2. Copy it to `/config/www/`.
-3. Add it under **Settings → Dashboards → ⋮ → Resources** as `/local/hadash-card.js`, with the type *JavaScript module*.
+3. Add it under **Settings → Dashboards → ⋮ → Resources** as `/local/omnium-home-3d.js`, with the type *JavaScript module*.
 
-If you switch from a manual install to the Marketplace or HACS, delete the old `/local/hadash-card.js` resource. Otherwise the card is loaded twice.
+If you switch from a manual install to the Marketplace or HACS, delete the old `/local/omnium-home-3d.js` resource. Otherwise the card is loaded twice.
 
 ### Wall tablet tips
 
@@ -60,7 +60,7 @@ Put the card alone in a dashboard view of the **Panel** type and set `height: 10
 Add the card with no options and it shows an example two-floor house:
 
 ```yaml
-type: custom:hadash-card
+type: custom:omnium-home-3d
 height: 100%
 ```
 
@@ -70,7 +70,7 @@ Then tap the **pencil** button to open the floor plan editor and draw your own h
 
 The pencil button opens the editor. By default it is only shown to administrators; `editor: false` hides it and `editor: true` shows it to everyone.
 
-![The floor plan editor with a room selected](https://raw.githubusercontent.com/peter-gabriel/hadash-card/main/docs/editor.png)
+![The floor plan editor with a room selected](https://raw.githubusercontent.com/peter-gabriel/omnium-home-3d/main/docs/editor.png)
 
 1. **Background plan:** pick a photo or screenshot of your floor plan. In Home Assistant the image is stored in Home Assistant itself, so it does not bloat the dashboard. Then use **Calibrate scale**: tap both ends of a known length and enter it in meters.
 2. **Room:** drag a rectangle, or use **Free outline** and tap each corner for L-shaped rooms. A selected room can be moved. White corners change its shape, orange dots add corners, and a dragged corner snaps to the neighbouring room's corner.
@@ -94,7 +94,7 @@ Use the mouse wheel or two fingers to zoom. Ctrl+Z undoes, Delete removes, Esc c
 The editor writes all of this for you. Coordinates are in **meters** on a plan seen from above: `x` to the right, `y` down.
 
 ```yaml
-type: custom:hadash-card
+type: custom:omnium-home-3d
 height: 100%                 # default 600px; use 100% in a panel view
 wall_height: 1.0             # low walls look like a cut-away dollhouse
 idle_seconds: 90             # back to the overview after this many seconds without touches
@@ -176,14 +176,14 @@ music:
 - Search and the library tabs need the [SpotifyPlus](https://github.com/thlucas1/homeassistantcomponent_spotifyplus) integration. With any other `media_player`, the panel shows the player and the speakers.
 - **Speakers on the plan:** add a device with `speaker: <source name>` to place a speaker. Tapping it moves the music there; tapping the playing speaker pauses or resumes it, and it glows green while playing.
 
-The music panel is the [Spotify Panel Card](https://github.com/peter-gabriel/spotify-panel-card), bundled in HADash. You can also install it on its own to use in any dashboard.
+The music panel is the [Omnium Music](https://github.com/peter-gabriel/omnium-music), bundled in Omnium Home 3D. You can also install it on its own to use in any dashboard.
 
 ## Development
 
 ```bash
 npm install
 npm test          # sky, geometry, area sync, action and i18n tests
-npm run build     # outputs dist/hadash-card.js
+npm run build     # outputs dist/omnium-home-3d.js
 npm run dev       # demo with a fake Home Assistant on http://localhost:5181 (?lang=en, pt-BR or es)
 ```
 
@@ -193,7 +193,7 @@ npm run dev       # demo with a fake Home Assistant on http://localhost:5181 (?l
 npm run ha
 ```
 
-This rebuilds on every change and serves the file at `http://<your-machine-ip>:5182/hadash-card.js`. Add that URL as a resource on a test dashboard, then refresh Home Assistant after each change.
+This rebuilds on every change and serves the file at `http://<your-machine-ip>:5182/omnium-home-3d.js`. Add that URL as a resource on a test dashboard, then refresh Home Assistant after each change.
 
 ### Adding a language
 
