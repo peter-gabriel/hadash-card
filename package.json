@@ -1,0 +1,37 @@
+{
+  "name": "hadash-card",
+  "version": "0.1.0",
+  "description": "Home Assistant card: your home in 3D for a wall tablet, with touch rotate/zoom, live lights, sky and weather, a floor plan editor, area sync, actions and music",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peter-gabriel/hadash-card.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "hacs",
+    "3d",
+    "threejs",
+    "floor-plan"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "ha": "vite build --watch & vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lit": "^3.3.3",
+    "spotify-panel-card": "github:peter-gabriel/spotify-panel-card#v0.1.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.6",
+    "vitest": "^3.2.7"
+  }
+}
