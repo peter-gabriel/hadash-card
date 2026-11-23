@@ -3,12 +3,13 @@ import { buildFloors, DEMO_FLOORS, roomLabel, type Device, type Floor, type Room
 import { HouseScene, type FloorSel } from './scene';
 import 'spotify-panel-card/panel';
 import { speakerIsCurrent, tapService } from './states';
-import { computeSky, WEATHER_PT, weatherIcon, type Sky } from './sky';
+import { computeSky, weatherIcon, type Sky } from './sky';
+import { setLanguage, t as L } from './i18n';
 import { listActions, loadTargets, runAction, type ActionItem, type ActionTargets } from './actions';
 import './editor';
 import type { CardConfig, Hass, HassEntity, Vec2 } from './types';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 
 class HadashCard extends LitElement {
@@ -88,6 +89,8 @@ class HadashCard extends LitElement {
 
   set hass(hass: Hass) {
     this._hass = hass;
+    // idioma do perfil no HA: ao mudar, refaz a cena (nomes da casa de exemplo, rótulos)
+    if (setLanguage(hass) && this._config) this.setConfig(this._config);
     this._applyHass();
     this.requestUpdate();
   }
@@ -233,7 +236,7 @@ class HadashCard extends LitElement {
     return html`<div class="wline">
       <svg viewBox="0 0 24 24"><path d=${weatherIcon(w.state, night)} /></svg>
       ${Number.isFinite(t) ? html`<b>${Math.round(t)}°</b>` : nothing}
-      <span>${WEATHER_PT[w.state] ?? w.state}</span>
+      <span>${L().weather[w.state] ?? w.state}</span>
     </div>`;
   }
 
@@ -296,7 +299,7 @@ class HadashCard extends LitElement {
     const st = this._hass?.states[d.entity];
     const name = d.name ?? st?.attributes.friendly_name ?? d.entity;
     if (!st || st.state === 'unavailable' || st.state === 'unknown') {
-      return this._showToast(st ? `${name} está indisponível no HA` : `${d.entity} não existe no HA`);
+      return this._showToast(st ? L().unavailableInHa(name) : L().missingInHa(d.entity));
     }
     // serviço pelo tipo real da entidade (um interruptor desenhado como luz continua sendo switch)
     const svc = tapService(d.entity.split('.')[0]);
@@ -304,12 +307,12 @@ class HadashCard extends LitElement {
     try {
       await this._hass.callService(svc[0], svc[1], { entity_id: d.entity });
     } catch (e) {
-      return this._showToast(`Falhou: ${(e as Error).message ?? e}`);
+      return this._showToast(L().failed(String((e as Error).message ?? e)));
     }
     // o HA aceitou, mas o aparelho pode não reagir (fora do ar, sem bateria…)
     const before = st.last_changed;
     window.setTimeout(() => {
-      if (this._hass?.states[d.entity]?.last_changed === before) this._showToast(`${name} não respondeu`);
+      if (this._hass?.states[d.entity]?.last_changed === before) this._showToast(L().noResponse(name));
     }, 4000);
   }
 
@@ -326,7 +329,7 @@ class HadashCard extends LitElement {
     try {
       await this._hass.callService('media_player', service, { entity_id: id, ...data });
     } catch (e) {
-      this._showToast(`Falhou: ${(e as Error).message ?? e}`);
+      this._showToast(L().failed(String((e as Error).message ?? e)));
     }
   }
 
@@ -334,7 +337,7 @@ class HadashCard extends LitElement {
   private async _tapSpeaker(d: Device) {
     const st = this._player;
     if (speakerIsCurrent(st, d.speaker) && st?.state !== 'off') return this._callPlayer('media_play_pause');
-    this._showToast(`Tocando em ${d.name ?? d.speaker}`);
+    this._showToast(L().playingOn(String(d.name ?? d.speaker)));
     await this._callPlayer('select_source', { source: d.speaker });
   }
 
@@ -398,7 +401,7 @@ class HadashCard extends LitElement {
     const base = this._editBase ?? this._config;
     try {
       await saveCardConfig(this._hass, base, cfg);
-      this._showToast('Planta salva no dashboard');
+      this._showToast(L().planSaved);
     } catch {
       // listas de números numa linha só: [8.2, 7.8] em vez de uma linha por número
       this._yaml = JSON.stringify(cfg, null, 2).replace(/\[\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]/g, '[$1, $2]');
@@ -436,7 +439,7 @@ class HadashCard extends LitElement {
   private _copyCoord() {
     if (!this._coord) return;
     navigator.clipboard?.writeText(`[${this._coord[0]}, ${this._coord[1]}]`).then(
-      () => this._showToast('Coordenada copiada'),
+      () => this._showToast(L().coordCopied),
       () => {},
     );
   }
@@ -465,20 +468,20 @@ class HadashCard extends LitElement {
       return html`<button class="room ${this._focused === r.id ? 'sel' : ''}" @click=${() => this._pickRoom(r.id)}>
         <span class="nm">${this._roomName(r)}</span>
         <span class="meta">
-          ${temp(r)} ${motion ? html`<i class="mot" title="Presença"></i>` : nothing}
-          ${n ? html`<i class="on" title="${n} luz(es) acesa(s)">${ICON_BULB}${n}</i>` : nothing}
+          ${temp(r)} ${motion ? html`<i class="mot" title=${L().motion}></i>` : nothing}
+          ${n ? html`<i class="on" title=${L().lightsOn(n)}>${ICON_BULB}${n}</i>` : nothing}
         </span>
       </button>`;
     };
     return html`<nav class="rail ${this._railOpen ? 'open' : ''}">
       <button class="rail-toggle" @click=${() => (this._railOpen = !this._railOpen)}>
-        ${ICON_LIST}<span>${this._focused ? this._roomName(this._rooms.find((r) => r.id === this._focused)!) : 'Cômodos'}</span>
+        ${ICON_LIST}<span>${this._focused ? this._roomName(this._rooms.find((r) => r.id === this._focused)!) : L().rooms}</span>
         <svg class="chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z" /></svg>
       </button>
       <div class="rail-list">
         <button class="room home ${this._focused === null ? 'sel' : ''}" @click=${() => this._pickRoom(null)}>
-          <span class="nm">${this._floor === 'all' ? 'Casa toda' : this._floors[this._floor]?.name ?? 'Casa'}</span>
-          <span class="meta">${totalOn ? html`<i class="on">${ICON_BULB}${totalOn}</i>` : html`<span class="t">tudo apagado</span>`}</span>
+          <span class="nm">${this._floor === 'all' ? L().wholeHouse : this._floors[this._floor]?.name ?? L().home}</span>
+          <span class="meta">${totalOn ? html`<i class="on">${ICON_BULB}${totalOn}</i>` : html`<span class="t">${L().allOff}</span>`}</span>
         </button>
         ${showFloors
           ? this._floors.map(
@@ -531,12 +534,12 @@ class HadashCard extends LitElement {
     if (!this._hass) return;
     try {
       await runAction(this._hass, it);
-      this._showToast(`${it.name}: executado`);
+      this._showToast(L().actionDone(it.name));
       // retorno na planta: pulsam os dispositivos que a ação mexe
       const t = this._actionTargets?.get(it.id);
       if (t) for (const r of this._rooms) for (const d of r.devices) if (t.entities.has(d.entity)) this._scene?.pulse(d);
     } catch (e) {
-      this._showToast(`Falhou: ${(e as Error).message ?? e}`);
+      this._showToast(L().failed(String((e as Error).message ?? e)));
     }
   }
 
@@ -557,24 +560,24 @@ class HadashCard extends LitElement {
     const runnable = items.filter((i) => i.domain !== 'automation' && !here.includes(i));
     const tile = (it: ActionItem) => html`<button class="act ${it.state === 'on' && it.domain === 'script' ? 'running' : ''}" @click=${() => this._run(it)}>
       <span class="ic">${this._actIcon(it)}</span>
-      <span class="tx"><b>${it.name}</b><small>${this._targetSummary(t?.get(it.id)) || (it.domain === 'scene' ? 'cena' : 'rotina')}</small></span>
+      <span class="tx"><b>${it.name}</b><small>${this._targetSummary(t?.get(it.id)) || (it.domain === 'scene' ? L().scene : L().routine)}</small></span>
       <span class="go">${ICON_PLAY}</span>
     </button>`;
     return html`<aside class="actions" @pointerdown=${() => this._kickIdle()}>
       <header>
-        <h3>Ações</h3>
-        <button class="x" @click=${this._toggleActions} title="Fechar">${ICON_CLOSE}</button>
+        <h3>${L().actions}</h3>
+        <button class="x" @click=${this._toggleActions} title=${L().close}>${ICON_CLOSE}</button>
       </header>
       ${here.length
-        ? html`<h4>Neste cômodo · ${this._roomName(room!)}</h4>
+        ? html`<h4>${L().inThisRoom(this._roomName(room!))}</h4>
             <div class="acts">${here.map(tile)}</div>`
         : nothing}
-      ${runnable.length ? html`<h4>${here.length ? 'Outras cenas e rotinas' : 'Cenas e rotinas'}</h4>` : nothing}
+      ${runnable.length ? html`<h4>${here.length ? L().otherScenesAndRoutines : L().scenesAndRoutines}</h4>` : nothing}
       ${runnable.length
         ? html`<div class="acts">${runnable.map(tile)}</div>`
         : here.length
           ? nothing
-          : html`<h4>Cenas e rotinas</h4><p class="empty">Nenhum script ou cena ainda. Crie em Configurações → Automações e cenas.</p>`}
+          : html`<h4>${L().scenesAndRoutines}</h4><p class="empty">${L().noScenes}</p>`}
     </aside>`;
   }
 
@@ -602,8 +605,8 @@ class HadashCard extends LitElement {
 
   render() {
     if (!this._config) return nothing;
-    const time = this._now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const date = this._now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const time = this._now.toLocaleTimeString(L().locale, { hour: '2-digit', minute: '2-digit' });
+    const date = this._now.toLocaleDateString(L().locale, { weekday: 'long', day: 'numeric', month: 'long' });
     return html`
       <div class="card" style="height:${this._config.height ?? '600px'}">
         ${this._renderSky()}
@@ -618,22 +621,22 @@ class HadashCard extends LitElement {
           </div>
           <div class="tools">
             ${this._hass && this._menuActions().length
-              ? html`<button class=${this._actionsOpen ? 'active-soft' : ''} @click=${this._toggleActions} title="Ações">${ICON_BOLT}</button>`
+              ? html`<button class=${this._actionsOpen ? 'active-soft' : ''} @click=${this._toggleActions} title=${L().actions}>${ICON_BOLT}</button>`
               : nothing}
             ${this._config.music
-              ? html`<button class=${this._player?.state === 'playing' ? 'playing' : ''} @click=${this._openMusic} title="Música">
+              ? html`<button class=${this._player?.state === 'playing' ? 'playing' : ''} @click=${this._openMusic} title=${L().music}>
                   ${ICON_MUSIC}
                 </button>`
               : nothing}
             ${this._canEdit
-              ? html`<button @click=${this._openEditor} title="Editar planta">${ICON_EDIT}</button>`
+              ? html`<button @click=${this._openEditor} title=${L().editPlan}>${ICON_EDIT}</button>`
               : nothing}
             ${this._config.show_coords
-              ? html`<button class=${this._coordMode ? 'active' : ''} @click=${this._toggleCoords} title="Régua">
+              ? html`<button class=${this._coordMode ? 'active' : ''} @click=${this._toggleCoords} title=${L().ruler}>
                   ${ICON_RULER}
                 </button>`
               : nothing}
-            <button @click=${() => this._setFloor(this._defaultFloor())} title="Visão geral">${ICON_HOME}</button>
+            <button @click=${() => this._setFloor(this._defaultFloor())} title=${L().overview}>${ICON_HOME}</button>
           </div>
         </div>
 
@@ -641,19 +644,19 @@ class HadashCard extends LitElement {
           ? html`<div class="coord" @click=${this._copyCoord}>
               ${this._coord
                 ? html`${this._floors.length > 1 ? html`<span>${this._floors[this._coordFloor]?.name}</span>` : nothing}
-                  <b>[${this._coord[0]}, ${this._coord[1]}]</b><span>toque para copiar</span>`
-                : html`<span>Toque no piso para ver a coordenada (m)</span>`}
+                  <b>[${this._coord[0]}, ${this._coord[1]}]</b><span>${L().tapToCopy}</span>`
+                : html`<span>${L().tapFloorForCoord}</span>`}
             </div>`
           : nothing}
 
         ${this._floors.length > 1
           ? html`<div class="floors">
               <button class=${this._floor === 'all' ? 'sel' : ''} @click=${() => this._setFloor('all')}>
-                ${ICON_LAYERS}<span>Todos</span>
+                ${ICON_LAYERS}<span>${L().allFloors}</span>
               </button>
               ${[...this._floors].reverse().map(
                 (f) => html`<button class=${this._floor === f.index ? 'sel' : ''} @click=${() => this._setFloor(f.index)}>
-                  <b>${f.index === 0 ? 'T' : f.index}</b><span>${f.name}</span>
+                  <b>${f.index === 0 ? L().groundShort : f.index}</b><span>${f.name}</span>
                 </button>`,
               )}
             </div>`
@@ -667,7 +670,7 @@ class HadashCard extends LitElement {
 
         ${this._musicOpen
           ? html`<div class="sheet" @pointerdown=${() => this._kickIdle()}>
-              <button class="close" @click=${this._closeMusic} title="Fechar">${ICON_CLOSE}</button>
+              <button class="close" @click=${this._closeMusic} title=${L().close}>${ICON_CLOSE}</button>
               <spotify-panel
                 class="sheet-body"
                 mode="full"
@@ -691,30 +694,27 @@ class HadashCard extends LitElement {
           : nothing}
         ${this._previewing
           ? html`<div class="previewbar">
-              <span>Pré-visualização: ainda não foi salvo</span>
-              <button @click=${() => (this._previewing = false)}>Voltar ao editor</button>
+              <span>${L().previewNotSaved}</span>
+              <button @click=${() => (this._previewing = false)}>${L().backToEditor}</button>
               <button
                 class="primary"
                 @click=${() => this._saveConfig((this.renderRoot.querySelector('hadash-editor') as any).buildConfig())}
               >
-                Salvar
+                ${L().save}
               </button>
             </div>`
           : nothing}
         ${this._yaml
           ? html`<div class="yaml">
               <div>
-                <h3>Não consegui salvar direto no dashboard</h3>
-                <p>
-                  A planta está aplicada nesta tela. Para guardar, abra o editor do card ("Editar em código") e substitua
-                  a configuração por esta (JSON também é YAML válido):
-                </p>
+                <h3>${L().cantSaveTitle}</h3>
+                <p>${L().cantSaveText}</p>
                 <textarea readonly .value=${this._yaml}></textarea>
                 <div class="row">
-                  <button @click=${() => navigator.clipboard?.writeText(this._yaml!).then(() => this._showToast('Copiado'))}>
-                    Copiar
+                  <button @click=${() => navigator.clipboard?.writeText(this._yaml!).then(() => this._showToast(L().copied))}>
+                    ${L().copy}
                   </button>
-                  <button class="primary" @click=${() => (this._yaml = undefined)}>Fechar</button>
+                  <button class="primary" @click=${() => (this._yaml = undefined)}>${L().close}</button>
                 </div>
               </div>
             </div>`
@@ -1704,7 +1704,7 @@ const ICON_RULER = html`<svg viewBox="0 0 24 24">
  * em qualquer nível (views, sections, stacks) e salva
  */
 async function saveCardConfig(hass: Hass | undefined, oldCfg: CardConfig, newCfg: CardConfig) {
-  if (!hass) throw new Error('sem HA');
+  if (!hass) throw new Error(L().errNoHa);
   const seg = location.pathname.split('/')[1];
   const url_path = !seg || seg === 'lovelace' ? null : seg;
   const conf = await hass.callWS<Record<string, unknown>>({ type: 'lovelace/config', url_path });
@@ -1723,7 +1723,7 @@ async function saveCardConfig(hass: Hass | undefined, oldCfg: CardConfig, newCfg
   walk(conf);
   // um HADash só: é ele; vários: o que tem a config idêntica à de antes; senão não arrisca salvar no lugar errado
   const hit = slots.length === 1 ? slots[0] : slots.filter((x) => x.same).length === 1 ? slots.find((x) => x.same) : undefined;
-  if (!hit) throw new Error(`card não identificado (${slots.length} HADash no dashboard)`);
+  if (!hit) throw new Error(L().errCardNotFound(slots.length));
   hit.list[hit.i] = newCfg;
   await hass.callWS({ type: 'lovelace/config/save', url_path, config: conf });
 }
@@ -1734,7 +1734,7 @@ if (!customElements.get('hadash-card')) {
   ((window as any).customCards ??= []).push({
     type: 'hadash-card',
     name: 'HADash 3D',
-    description: 'Casa em 3D: gire e dê zoom com os dedos, toque para ligar/desligar',
+    description: L().cardDescription,
   });
   console.info(`%cHADASH-CARD ${VERSION}`, 'color:#ffb45c;font-weight:bold');
 }

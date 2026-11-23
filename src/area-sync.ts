@@ -1,4 +1,5 @@
 import type { DeviceConfig, FloorConfig, Hass, RoomConfig } from './types';
+import { t } from './i18n';
 
 /**
  * Sincronização planta -> registro do HA (áreas, andares e área de cada entidade).
@@ -97,12 +98,12 @@ export function computePlan(floors: FloorConfig[], hass: Hass): { items: SyncIte
   for (const [entity, where] of placements) {
     const entName = hass.states[entity]?.attributes.friendly_name ?? entity;
     if (!hass.entities?.[entity]) {
-      notes.push({ entity: entName, reason: 'sem ID único no HA: a área não pode ser definida por aqui' });
+      notes.push({ entity: entName, reason: t().syncNoUniqueId });
       continue;
     }
     const targets = new Set(where.map((w) => w.room.area ?? `novo:${w.room.name}`));
     if (targets.size > 1) {
-      notes.push({ entity: entName, reason: `aparece em ${targets.size} cômodos diferentes; escolha um só para definir a área` });
+      notes.push({ entity: entName, reason: t().syncSeveralRooms(targets.size) });
       continue;
     }
     const { room } = where[0];
@@ -146,7 +147,7 @@ export async function applyPlan(items: SyncItem[], floors: FloorConfig[], hass: 
       floorId.set(it.fi, res.floor_id);
       done++;
     } catch (e) {
-      errors.push(`Andar "${it.name}": ${(e as Error).message ?? e}`);
+      errors.push(t().syncErrFloor(it.name, String((e as Error).message ?? e)));
     }
   }
 
@@ -168,7 +169,7 @@ export async function applyPlan(items: SyncItem[], floors: FloorConfig[], hass: 
       if (it.room.name && norm(it.room.name) === norm(it.name)) delete it.room.name;
       done++;
     } catch (e) {
-      errors.push(`Área "${it.name}": ${(e as Error).message ?? e}`);
+      errors.push(t().syncErrArea(it.name, String((e as Error).message ?? e)));
     }
   }
 
@@ -180,7 +181,7 @@ export async function applyPlan(items: SyncItem[], floors: FloorConfig[], hass: 
       await hass.callWS({ type: 'config/area_registry/update', area_id: it.room.area, floor_id: fid });
       done++;
     } catch (e) {
-      errors.push(`Área "${it.areaName}" no andar: ${(e as Error).message ?? e}`);
+      errors.push(t().syncErrAreaFloor(it.areaName, String((e as Error).message ?? e)));
     }
   }
 

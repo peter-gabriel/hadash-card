@@ -203,6 +203,8 @@ const ENTITY_AREA: Record<string, string> = {
 };
 
 const hass: Omit<Hass, 'states'> = {
+  // idioma do demo: ?lang=en | pt-BR | es
+  language: new URLSearchParams(location.search).get('lang') ?? 'pt-BR',
   // presença de "spotifyplus" liga as abas de biblioteca no painel
   services: { spotifyplus: {} },
   areas: AREAS,

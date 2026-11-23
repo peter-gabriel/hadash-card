@@ -3,6 +3,7 @@ import { computeSky } from '../src/sky';
 import { isLightSwitch, wallSegments } from '../src/house';
 import { addOpening, pointInPoly, rectPoly, roomAt, syncOpenings } from '../src/editor-geom';
 import { ago } from '../src/actions';
+import { setLanguage } from '../src/i18n';
 import { computePlan } from '../src/area-sync';
 import type { FloorConfig, Hass, RoomConfig } from '../src/types';
 
@@ -68,9 +69,10 @@ describe('editor geometry', () => {
 
 describe('actions', () => {
   it('formats last run', () => {
-    expect(ago(undefined)).toBe('nunca');
-    expect(ago(new Date(Date.now() - 5 * 60_000).toISOString())).toBe('há 5 min');
-    expect(ago(new Date(Date.now() - 26 * 3_600_000).toISOString())).toBe('ontem');
+    setLanguage({ language: 'en' });
+    expect(ago(undefined)).toBe('never');
+    expect(ago(new Date(Date.now() - 5 * 60_000).toISOString())).toBe('5 min ago');
+    expect(ago(new Date(Date.now() - 26 * 3_600_000).toISOString())).toBe('yesterday');
   });
 });
 
