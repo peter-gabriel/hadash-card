@@ -11,7 +11,7 @@ export type FloorKind = 'wood' | 'tile';
 /** cômodos molhados/externos ganham cerâmica; o resto, madeira */
 export function floorKind(name: string): FloorKind {
   const n = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  return /banh|wc|lavabo|cozinh|kitchen|bath|servic|lavand|laundry|sacada|varanda|terra|balcon|hall|circula|garag/.test(n)
+  return /banh|bano|wc|lavabo|aseo|toilet|powder|cozinh|cocina|kitchen|bath|servic|lavand|lavadero|laundry|utility|sacada|varanda|terra|balcon|porch|patio|hall|recibidor|entry|circula|garag/.test(n)
     ? 'tile'
     : 'wood';
 }

@@ -19,8 +19,7 @@ A Home Assistant Lovelace card that shows your home in **3D**, made for a tablet
 - **Area sync:** link each room to a Home Assistant area. When you save, the card can create the missing areas and floors and move each device to its room's area.
 - **Idle mode:** after a while without touches it goes back to the overview and slowly rotates.
 - **Battery friendly:** the scene is only redrawn when something changes.
-
-The UI is in Brazilian Portuguese for now.
+- **Localized:** Brazilian Portuguese, Spanish and English, following your Home Assistant language. Anything else falls back to English. The example house is translated too.
 
 ![The actions panel with the routines of the selected room](https://raw.githubusercontent.com/peter-gabriel/hadash-card/main/docs/actions.png)
 
@@ -183,9 +182,9 @@ The music panel is the [Spotify Panel Card](https://github.com/peter-gabriel/spo
 
 ```bash
 npm install
-npm test          # sky, geometry, area sync and action tests
+npm test          # sky, geometry, area sync, action and i18n tests
 npm run build     # outputs dist/hadash-card.js
-npm run dev       # demo with a fake Home Assistant on http://localhost:5181
+npm run dev       # demo with a fake Home Assistant on http://localhost:5181 (?lang=en, pt-BR or es)
 ```
 
 ### Quick dev loop
@@ -195,6 +194,10 @@ npm run ha
 ```
 
 This rebuilds on every change and serves the file at `http://<your-machine-ip>:5182/hadash-card.js`. Add that URL as a resource on a test dashboard, then refresh Home Assistant after each change.
+
+### Adding a language
+
+UI strings live in [`src/i18n.ts`](src/i18n.ts). Add a dictionary of type `Strings` and map its language prefix in `strings()`. The test suite checks that every language has every key.
 
 ### Contributing
 

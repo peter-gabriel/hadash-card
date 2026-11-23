@@ -1,4 +1,9 @@
 import { LitElement, html, svg, css, nothing, type TemplateResult } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { t as L } from './i18n';
+
+/** nomes vindos do HA entram em HTML traduzido: escapa antes */
+const esc = (x: string) => x.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 import {
   addOpening,
   centroid,
@@ -18,7 +23,7 @@ import {
   syncOpenings,
 } from './editor-geom';
 import { applyPlan, computePlan, type SyncItem, type SyncNote } from './area-sync';
-import { DEMO_FLOORS, isLightSwitch, roomLabel, signedArea, wallSegments } from './house';
+import { demoFloors, isLightSwitch, roomLabel, signedArea, wallSegments } from './house';
 import type { BackgroundConfig, CardConfig, DeviceConfig, FloorConfig, Hass, RoomConfig, Vec2 } from './types';
 
 type Tool = 'select' | 'rect' | 'poly' | 'door' | 'device' | 'stairs' | 'scale' | 'bg';
@@ -56,13 +61,13 @@ const DOMAIN_COLOR: Record<string, string> = {
   speaker: '#1ed760',
 };
 
-const TOOLS: [Tool, string, string][] = [
-  ['select', 'Selecionar', 'M7 2l12 11.2-5.8.5 3.3 7.3-2.2 1-3.2-7.4L7 18.5z'],
-  ['rect', 'Cômodo', 'M3 5v14h18V5zm2 2h14v10H5z'],
-  ['poly', 'Contorno livre', 'M3 3h8v2H5v6H3zm0 10h2v6h6v2H3zm10 6h6v-6h2v8h-8zm6-14h-6V3h8v8h-2z'],
-  ['door', 'Porta', 'M5 21V3h11v2h3v16h-2V7h-1v14zm6-8h2v-2h-2z'],
-  ['stairs', 'Escada', 'M15 5v4h-4v4H7v4H3v2h6v-4h4v-4h4V7h4V5z'],
-  ['device', 'Dispositivo', 'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7m0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5'],
+const TOOLS = (): [Tool, string, string][] => [
+  ['select', L().toolSelect, 'M7 2l12 11.2-5.8.5 3.3 7.3-2.2 1-3.2-7.4L7 18.5z'],
+  ['rect', L().toolRoom, 'M3 5v14h18V5zm2 2h14v10H5z'],
+  ['poly', L().toolOutline, 'M3 3h8v2H5v6H3zm0 10h2v6h6v2H3zm10 6h6v-6h2v8h-8zm6-14h-6V3h8v8h-2z'],
+  ['door', L().toolDoor, 'M5 21V3h11v2h3v16h-2V7h-1v14zm6-8h2v-2h-2z'],
+  ['stairs', L().toolStairs, 'M15 5v4h-4v4H7v4H3v2h6v-4h4v-4h4V7h4V5z'],
+  ['device', L().toolDevice, 'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7m0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5'],
 ];
 
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -73,8 +78,8 @@ function toFloors(cfg: CardConfig): FloorConfig[] {
   const src: FloorConfig[] = cfg.floors?.length
     ? clone(cfg.floors)
     : cfg.rooms?.length
-      ? [{ name: 'Térreo', rooms: clone(cfg.rooms) }]
-      : [{ name: 'Térreo', rooms: [] }];
+      ? [{ name: L().defaultFloor, rooms: clone(cfg.rooms) }]
+      : [{ name: L().defaultFloor, rooms: [] }];
   for (const f of src)
     for (const r of f.rooms) {
       r.polygon = roomPoly(r);
@@ -348,7 +353,7 @@ export class HadashEditor extends LitElement {
         const n = addOpening(rooms, p, 0.8);
         if (!n) {
           this._undo.pop();
-          this._say('Toque em cima de uma parede para abrir uma porta.');
+          this._say(L().tapWallForDoor);
         } else {
           const ri = rooms.findIndex((r) => r.openings?.length && (() => {
             const w = openingWorld(roomPoly(r), r.openings[r.openings.length - 1]);
@@ -360,9 +365,9 @@ export class HadashEditor extends LitElement {
         break;
       }
       case 'device': {
-        if (!this._pending) return this._say('Escolha um dispositivo na lista ao lado.');
+        if (!this._pending) return this._say(L().pickDeviceFirst);
         const ri = roomAt(rooms, p);
-        if (ri < 0) return this._say('Coloque o dispositivo dentro de um cômodo.');
+        if (ri < 0) return this._say(L().putDeviceInRoom);
         this._commit();
         const devs = ((rooms[ri].devices ??= []) as DeviceConfig[]);
         const dev: DeviceConfig = { ...this._pending, pos: ps };
@@ -474,11 +479,11 @@ export class HadashEditor extends LitElement {
       const [x0, x1] = [Math.min(dr.a[0], dr.b[0]), Math.max(dr.a[0], dr.b[0])];
       const [y0, y1] = [Math.min(dr.a[1], dr.b[1]), Math.max(dr.a[1], dr.b[1])];
       if (dr.k === 'rect') {
-        if (x1 - x0 < 0.3 || y1 - y0 < 0.3) return this._say('Arraste para desenhar o cômodo.');
+        if (x1 - x0 < 0.3 || y1 - y0 < 0.3) return this._say(L().dragToDrawRoom);
         this._commit();
         this._addRoom(rectPoly(x0, y0, r3(x1 - x0), r3(y1 - y0)));
       } else {
-        if (dist(dr.a, dr.b) < 0.6) return this._say('Arraste do pé da escada até o topo.');
+        if (dist(dr.a, dr.b) < 0.6) return this._say(L().dragStairs);
         this._commit();
         (this._floor.stairs ??= []).push({ from: dr.a, to: dr.b, width: 0.9 });
         this._sel = { k: 'stairs', si: this._floor.stairs.length - 1 };
@@ -524,18 +529,18 @@ export class HadashEditor extends LitElement {
     const d = this._draft;
     if (d?.k !== 'poly') return;
     this._draft = undefined;
-    if (d.pts.length < 3) return this._say('O contorno precisa de pelo menos 3 cantos.');
+    if (d.pts.length < 3) return this._say(L().outlineNeeds3);
     this._commit();
     this._addRoom(d.pts);
   }
 
   private _addRoom(poly: Vec2[]) {
     const all = this._floors.flatMap((f) => f.rooms);
-    const name = `Cômodo ${all.length + 1}`;
+    const name = L().roomN(all.length + 1);
     this._rooms.push({ name, polygon: poly, color: COLORS[all.length % COLORS.length], devices: [], openings: [] });
     this._sel = { k: 'room', ri: this._rooms.length - 1 };
     this._tool = 'select';
-    this._say('Cômodo criado. Dê um nome no painel ao lado.');
+    this._say(L().roomCreated);
   }
 
   private _deleteSel() {
@@ -569,8 +574,8 @@ export class HadashEditor extends LitElement {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) return this._say('Use uma imagem (JPG/PNG). PDF: tire um print da página.');
-    this._say('Enviando imagem…');
+    if (!file.type.startsWith('image/')) return this._say(L().useImage);
+    this._say(L().uploading);
     const dims = await imageSize(file);
     let url: string | undefined;
     // no HA: guarda a imagem no próprio HA (não pesa a config do dashboard)
@@ -590,7 +595,7 @@ export class HadashEditor extends LitElement {
     this._floor.background = { image: url, x: 0, y: 0, width, height: r3((width * dims.h) / dims.w), opacity: 0.55 };
     this.fit();
     this._setTool('scale');
-    this._say('Agora calibre a escala: toque nas duas pontas de uma medida conhecida.');
+    this._say(L().nowCalibrate);
   }
 
   private _applyScale(real: number) {
@@ -607,7 +612,7 @@ export class HadashEditor extends LitElement {
     this._scalePts = [];
     this._setTool('select');
     this.fit();
-    this._say(`Escala ajustada (${real} m). Agora desenhe os cômodos por cima.`);
+    this._say(L().scaleSet(real));
   }
 
   // ---------- dispositivos ----------
@@ -620,7 +625,7 @@ export class HadashEditor extends LitElement {
   }
 
   private _label(r: RoomConfig) {
-    return r.name || this._areaName(r.area) || r.area || 'Cômodo';
+    return r.name || this._areaName(r.area) || r.area || L().room;
   }
 
   private _allAreas() {
@@ -634,7 +639,7 @@ export class HadashEditor extends LitElement {
     this._commit();
     r.area = area || undefined;
     if (!area) {
-      if (!r.name) r.name = this._areaName(r.area) || 'Cômodo';
+      if (!r.name) r.name = this._areaName(r.area) || L().room;
       return this.requestUpdate();
     }
     delete r.name;
@@ -642,22 +647,22 @@ export class HadashEditor extends LitElement {
     const inArea = Object.values(this.hass?.states ?? {}).filter((s) => this._entityArea(s.entity_id) === area);
     const find = (domain: string, classes: string[]) =>
       inArea.find((s) => s.entity_id.startsWith(`${domain}.`) && classes.includes(s.attributes.device_class))?.entity_id;
-    if (!r.temperature && (r.temperature = find('sensor', ['temperature']))) filled.push('temperatura');
-    if (!r.humidity && (r.humidity = find('sensor', ['humidity']))) filled.push('umidade');
-    if (!r.motion && (r.motion = find('binary_sensor', ['motion', 'occupancy', 'presence']))) filled.push('presença');
-    this._say(`Ligado à área "${this._areaName(area)}"${filled.length ? ` · sensores: ${filled.join(', ')}` : ''}.`);
+    if (!r.temperature && (r.temperature = find('sensor', ['temperature']))) filled.push(L().sensorTemperature);
+    if (!r.humidity && (r.humidity = find('sensor', ['humidity']))) filled.push(L().sensorHumidity);
+    if (!r.motion && (r.motion = find('binary_sensor', ['motion', 'occupancy', 'presence']))) filled.push(L().sensorMotion);
+    this._say(L().linkedToArea(this._areaName(area), filled));
     this.requestUpdate();
   }
 
   private async _createArea(r: RoomConfig) {
-    const name = prompt('Nome da nova área no Home Assistant:', this._label(r));
+    const name = prompt(L().newAreaPrompt, this._label(r));
     if (!name?.trim() || !this.hass) return this.requestUpdate();
     try {
       const res = await this.hass.callWS<{ area_id: string; name: string }>({ type: 'config/area_registry/create', name: name.trim() });
       this._newAreas[res.area_id] = res.name;
       this._linkArea(r, res.area_id);
     } catch (e) {
-      this._say(`Não consegui criar a área: ${(e as Error).message ?? e}`);
+      this._say(L().cantCreateArea(String((e as Error).message ?? e)));
       this.requestUpdate();
     }
   }
@@ -679,7 +684,7 @@ export class HadashEditor extends LitElement {
         }
       }
     if (!n) this._undo.pop();
-    this._say(n ? `${n} cômodo(s) ligados às áreas de mesmo nome.` : 'Nenhum cômodo com o mesmo nome de uma área.');
+    this._say(n ? L().autoLinked(n) : L().autoLinkedNone);
     this.requestUpdate();
   }
 
@@ -704,7 +709,7 @@ export class HadashEditor extends LitElement {
     const ids = Object.keys(this.hass.states).filter(
       (id) => PLACEABLE.includes(id.split('.')[0]) && !placed.has(id) && this._entityArea(id) === r.area && !this.hass!.entities?.[id]?.hidden,
     );
-    if (!ids.length) return this._say('Nenhum dispositivo novo nessa área.');
+    if (!ids.length) return this._say(L().noNewDevices);
     this._commit();
     const poly = roomPoly(r);
     const c = centroid(poly);
@@ -717,7 +722,7 @@ export class HadashEditor extends LitElement {
       if (!pointInPoly(pos, poly)) pos = snapP(c);
       ((r.devices ??= []) as DeviceConfig[]).push({ entity, pos });
     });
-    this._say(`${ids.length} dispositivo(s) adicionados. Arraste para o lugar certo.`);
+    this._say(L().devicesAdded(ids.length));
   }
 
   // ---------- render ----------
@@ -730,22 +735,22 @@ export class HadashEditor extends LitElement {
           ${this._floors.map(
             (f, i) => html`<button class=${i === this._fi ? 'sel' : ''} @click=${() => this._goFloor(i)}>${f.name}</button>`,
           )}
-          <button class="add" @click=${this._addFloor} title="Novo piso">+ Piso</button>
+          <button class="add" @click=${this._addFloor} title=${L().newFloor}>${L().addFloor}</button>
         </div>
         <div class="tools">
-          ${TOOLS.map(
+          ${TOOLS().map(
             ([t, label, d]) => html`<button class=${this._tool === t ? 'sel' : ''} @click=${() => this._setTool(t)} title=${label}>
               <svg viewBox="0 0 24 24"><path d=${d} /></svg><span>${label}</span>
             </button>`,
           )}
         </div>
         <div class="actions">
-          <button @click=${this._undoLast} ?disabled=${!this._undo.length} title="Desfazer (Ctrl+Z)">↶</button>
-          <button @click=${() => this.fit()} title="Enquadrar">⤢</button>
+          <button @click=${this._undoLast} ?disabled=${!this._undo.length} title=${L().undo}>↶</button>
+          <button @click=${() => this.fit()} title=${L().fit}>⤢</button>
           <span class="sep"></span>
-          <button @click=${() => this._emit('editor-close')}>Cancelar</button>
-          <button @click=${() => this._emit('editor-preview', this.buildConfig())}>Ver em 3D</button>
-          <button class="primary" @click=${this._startSave}>Salvar</button>
+          <button @click=${() => this._emit('editor-close')}>${L().cancel}</button>
+          <button @click=${() => this._emit('editor-preview', this.buildConfig())}>${L().view3d}</button>
+          <button class="primary" @click=${this._startSave}>${L().save}</button>
         </div>
       </header>
       <main>
@@ -768,7 +773,7 @@ export class HadashEditor extends LitElement {
     const plan = computePlan(this._floors, this.hass);
     if (!plan.items.length && !plan.notes.length) {
       if (saveAfter) return this._emit('editor-save', this.buildConfig());
-      return this._say('Planta e áreas do HA já estão iguais.');
+      return this._say(L().alreadyInSync);
     }
     this._syncSaveAfter = saveAfter;
     this._sync = plan;
@@ -783,7 +788,7 @@ export class HadashEditor extends LitElement {
     this._sync = { ...sync, busy: true };
     const res = await applyPlan(sync.items, this._floors, this.hass);
     this._sync = undefined;
-    this._say(res.errors.length ? `${res.done} mudança(s) no HA; ${res.errors.length} falharam: ${res.errors[0]}` : `${res.done} mudança(s) aplicadas no HA.`);
+    this._say(res.errors.length ? L().syncPartly(res.done, res.errors.length, res.errors[0]) : L().syncDone(res.done));
     if (this._syncSaveAfter) this._emit('editor-save', this.buildConfig());
     else this.requestUpdate();
   }
@@ -807,34 +812,31 @@ export class HadashEditor extends LitElement {
     const n = items.filter((i) => i.checked).length;
     return html`<div class="modal">
       <div class="sheet">
-        <h3>Sincronizar com o Home Assistant</h3>
-        <p class="hint">
-          Deixe a planta e as áreas do HA iguais: assim voz, automações e cards por área seguem a planta. Nada é apagado
-          nem renomeado no HA; desmarque o que não quiser.
-        </p>
+        <h3>${L().syncTitle}</h3>
+        <p class="hint">${L().syncIntro}</p>
         <div class="sync-list">
-          ${group('floor', 'Andares a criar', (i) => html`Criar andar <b>${i.name}</b>`)}
-          ${group('area', 'Áreas', (i) =>
+          ${group('floor', L().syncFloors, (i) => html`${L().createFloor} <b>${i.name}</b>`)}
+          ${group('area', L().syncAreas, (i) =>
             i.existing
-              ? html`Ligar <b>${i.name}</b> à área que já existe com esse nome`
-              : html`Criar área <b>${i.name}</b>${this._floors.length > 1 ? html` <small>no andar ${floorName(i.fi)}</small>` : nothing}`,
+              ? html`${unsafeHTML(L().linkExisting(esc(i.name)))}`
+              : html`${L().createArea} <b>${i.name}</b>${this._floors.length > 1 ? html` <small>${L().onFloor(floorName(i.fi))}</small>` : nothing}`,
           )}
-          ${group('area-floor', 'Áreas no andar', (i) => html`Colocar <b>${i.areaName}</b> no andar <b>${i.floorName}</b>${i.from ? html` <small>(hoje: ${i.from})</small>` : nothing}`)}
-          ${group('entity', 'Dispositivos', (i) => html`<b>${i.entityName}</b> → ${i.toName} <small>${i.from ? `(hoje: ${i.from})` : '(sem área)'}</small>`)}
+          ${group('area-floor', L().syncAreasOnFloor, (i) => html`${L().putArea} <b>${i.areaName}</b> ${L().onTheFloor} <b>${i.floorName}</b>${i.from ? html` <small>${L().nowIn(i.from)}</small>` : nothing}`)}
+          ${group('entity', L().syncDevices, (i) => html`<b>${i.entityName}</b> → ${i.toName} <small>${i.from ? L().nowIn(i.from) : L().noArea}</small>`)}
           ${notes.length
-            ? html`<h4>Não dá para sincronizar</h4>
+            ? html`<h4>${L().syncCantSync}</h4>
                 ${notes.map((x) => html`<p class="hint">• <b>${x.entity}</b>: ${x.reason}</p>`)}`
             : nothing}
         </div>
         <div class="row">
-          <button @click=${() => (this._sync = undefined)} ?disabled=${busy}>Voltar</button>
+          <button @click=${() => (this._sync = undefined)} ?disabled=${busy}>${L().back}</button>
           ${this._syncSaveAfter
             ? html`<button @click=${() => ((this._sync = undefined), this._emit('editor-save', this.buildConfig()))} ?disabled=${busy}>
-                Salvar sem mexer no HA
+                ${L().saveWithoutHa}
               </button>`
             : nothing}
           <button class="primary" @click=${this._applySync} ?disabled=${busy || !n}>
-            ${busy ? 'Aplicando…' : this._syncSaveAfter ? `Aplicar ${n} e salvar` : `Aplicar ${n} no HA`}
+            ${busy ? L().applying : this._syncSaveAfter ? L().applyAndSave(n) : L().applyInHa(n)}
           </button>
         </div>
       </div>
@@ -852,7 +854,7 @@ export class HadashEditor extends LitElement {
       this._newAreas[res.area_id] = res.name;
       this._linkArea(r, res.area_id);
     } catch (e) {
-      this._say(`Não consegui criar a área: ${(e as Error).message ?? e}`);
+      this._say(L().cantCreateArea(String((e as Error).message ?? e)));
     }
   }
 
@@ -869,9 +871,9 @@ export class HadashEditor extends LitElement {
 
   private _addFloor() {
     this._commit();
-    this._floors = [...this._floors, { name: this._floors.length === 1 ? 'Superior' : `Piso ${this._floors.length + 1}`, rooms: [] }];
+    this._floors = [...this._floors, { name: this._floors.length === 1 ? L().upperFloor : L().floorN(this._floors.length + 1), rooms: [] }];
     this._goFloor(this._floors.length - 1);
-    this._say('Piso novo. O de baixo aparece tracejado para ajudar a alinhar.');
+    this._say(L().floorAdded);
   }
 
   private _renderSvg() {
@@ -1062,18 +1064,18 @@ export class HadashEditor extends LitElement {
     if (s?.k === 'device' && rooms[s.ri]?.devices?.[s.di]) return this._panelDevice(rooms[s.ri].devices![s.di] as DeviceConfig);
     if (s?.k === 'stairs' && this._floor.stairs?.[s.si]) return this._panelStairs(s.si);
     const help: Partial<Record<Tool, string>> = {
-      rect: 'Arraste na planta para desenhar um cômodo retangular. Os cantos se ajustam a uma grade de 5 cm.',
-      poly: 'Toque em cada canto do cômodo. Para fechar, toque no primeiro ponto (rosa), dê dois toques ou aperte Enter.',
-      door: 'Toque numa parede para abrir uma porta de 80 cm. Ela aparece nos dois cômodos que dividem a parede.',
-      stairs: 'Arraste do pé da escada até o topo. A escada sobe deste piso para o piso de cima.',
-      bg: 'Arraste para mover a imagem da planta.',
+      rect: L().helpRect,
+      poly: L().helpPoly,
+      door: L().helpDoor,
+      stairs: L().helpStairs,
+      bg: L().helpBg,
     };
     if (help[this._tool])
-      return html`<h3>${TOOLS.find((t) => t[0] === this._tool)?.[1] ?? 'Planta de fundo'}</h3>
+      return html`<h3>${TOOLS().find((t) => t[0] === this._tool)?.[1] ?? L().backgroundPlan}</h3>
         <p class="hint">${help[this._tool]}</p>
         ${this._tool === 'poly' && this._draft?.k === 'poly'
-          ? html`<div class="row"><button class="primary" @click=${this._finishPoly}>Concluir contorno</button>
-              <button @click=${() => (this._draft = undefined)}>Cancelar</button></div>`
+          ? html`<div class="row"><button class="primary" @click=${this._finishPoly}>${L().finishOutline}</button>
+              <button @click=${() => (this._draft = undefined)}>${L().cancel}</button></div>`
           : nothing}`;
     return this._panelFloor();
   }
@@ -1081,10 +1083,10 @@ export class HadashEditor extends LitElement {
   private _panelFloor() {
     const f = this._floor;
     const bg = f.background;
-    return html`<h3>Piso</h3>
-      <label>Nome<input .value=${f.name} @change=${(e: Event) => this._set(() => (f.name = val(e)))} /></label>
+    return html`<h3>${L().floor}</h3>
+      <label>${L().name}<input .value=${f.name} @change=${(e: Event) => this._set(() => (f.name = val(e)))} /></label>
       <label
-        >Altura do piso (m)
+        >${L().floorElevation}
         <input
           type="number"
           step="0.1"
@@ -1093,52 +1095,52 @@ export class HadashEditor extends LitElement {
           @change=${(e: Event) => this._set(() => (f.elevation = num(e)))}
       /></label>
       ${this._floors.length > 1
-        ? html`<button class="danger" @click=${this._deleteFloor}>Excluir este piso</button>`
+        ? html`<button class="danger" @click=${this._deleteFloor}>${L().deleteFloor}</button>`
         : nothing}
 
       ${this.hass?.areas
-        ? html`<h3>Áreas do HA</h3>
-            <p class="hint">Cada cômodo pode usar o nome de uma área do HA. Selecione o cômodo para escolher ou criar a área.</p>
-            <button @click=${this._autoLink}>Ligar cômodos às áreas de mesmo nome</button>
-            <button @click=${() => this._openSync(false)}>Comparar com as áreas do HA…</button>`
+        ? html`<h3>${L().haAreas}</h3>
+            <p class="hint">${L().haAreasHint}</p>
+            <button @click=${this._autoLink}>${L().linkSameName}</button>
+            <button @click=${() => this._openSync(false)}>${L().compareAreas}</button>`
         : nothing}
 
-      <h3>Planta de fundo</h3>
+      <h3>${L().backgroundPlan}</h3>
       ${bg
         ? html`<label
-              >Transparência
+              >${L().transparency}
               <input type="range" min="0.1" max="1" step="0.05" .value=${String(bg.opacity ?? 0.55)}
                 @input=${(e: Event) => ((bg.opacity = num(e)), this.requestUpdate())} /></label>
             <div class="row">
-              <button @click=${() => this._setTool('scale')}>Calibrar escala</button>
-              <button class=${this._tool === 'bg' ? 'sel' : ''} @click=${() => this._setTool(this._tool === 'bg' ? 'select' : 'bg')}>Mover imagem</button>
+              <button @click=${() => this._setTool('scale')}>${L().calibrateScale}</button>
+              <button class=${this._tool === 'bg' ? 'sel' : ''} @click=${() => this._setTool(this._tool === 'bg' ? 'select' : 'bg')}>${L().moveImage}</button>
             </div>
-            <button class="danger" @click=${() => this._set(() => delete f.background)}>Remover imagem</button>`
-        : html`<p class="hint">Use uma foto ou print da planta para desenhar por cima. Ela só aparece aqui no editor.</p>
-            <label class="file">Escolher imagem<input type="file" accept="image/*" @change=${this._upload} /></label>`}
+            <button class="danger" @click=${() => this._set(() => delete f.background)}>${L().removeImage}</button>`
+        : html`<p class="hint">${L().bgHint}</p>
+            <label class="file">${L().chooseImage}<input type="file" accept="image/*" @change=${this._upload} /></label>`}
 
-      <h3>Como usar</h3>
+      <h3>${L().howTo}</h3>
       <ul class="hint">
-        <li><b>Cômodo</b>: arraste um retângulo. Depois arraste os cantos brancos ou toque nos pontos laranja para criar cantos novos.</li>
-        <li><b>Porta</b>: toque numa parede.</li>
-        <li><b>Dispositivo</b>: escolha na lista e toque na planta.</li>
-        <li>Para navegar, use dois dedos ou a roda do mouse. No modo Selecionar, arrastar o vazio move a planta.</li>
-        <li>Delete apaga, Ctrl+Z desfaz.</li>
+        <li>${unsafeHTML(L().howToRoom)}</li>
+        <li>${unsafeHTML(L().howToDoor)}</li>
+        <li>${unsafeHTML(L().howToDevice)}</li>
+        <li>${L().howToNavigate}</li>
+        <li>${L().howToKeys}</li>
       </ul>
       ${!this._rooms.length && this._floors.length === 1
-        ? html`<button @click=${this._loadExample}>Começar com o sobrado de exemplo</button>`
+        ? html`<button @click=${this._loadExample}>${L().startWithExample}</button>`
         : nothing}`;
   }
 
   private _loadExample() {
     this._commit();
-    this._floors = toFloors({ type: '', floors: DEMO_FLOORS });
+    this._floors = toFloors({ type: '', floors: demoFloors() });
     this._fi = 0;
     requestAnimationFrame(() => this.fit());
   }
 
   private _deleteFloor() {
-    if (!confirm(`Excluir o piso "${this._floor.name}" e tudo que está nele?`)) return;
+    if (!confirm(L().deleteFloorConfirm(this._floor.name))) return;
     this._commit();
     this._floors = this._floors.filter((_, i) => i !== this._fi);
     this._goFloor(Math.max(0, this._fi - 1));
@@ -1147,26 +1149,23 @@ export class HadashEditor extends LitElement {
   private _panelScale() {
     const sp = this._scalePts;
     if (!this._floor.background)
-      return html`<h3>Calibrar escala</h3>
-        <p class="hint">Primeiro adicione a imagem da planta, no painel do piso.</p>
-        <button @click=${() => this._setTool('select')}>Voltar</button>`;
+      return html`<h3>${L().calibrateScale}</h3>
+        <p class="hint">${L().addImageFirst}</p>
+        <button @click=${() => this._setTool('select')}>${L().back}</button>`;
     const measured = sp.length === 2 ? dist(sp[0], sp[1]) : 0;
-    return html`<h3>Calibrar escala</h3>
-      <p class="hint">
-        Toque nas duas pontas de algo cuja medida você conhece, como uma parede com cota na planta ou a largura de uma
-        porta. Use zoom para acertar.
-      </p>
+    return html`<h3>${L().calibrateScale}</h3>
+      <p class="hint">${L().scaleHint}</p>
       ${sp.length === 2
         ? html`<label
-              >Medida real (m)
-              <input id="real" type="number" step="0.01" min="0.1" placeholder="ex.: 3.50" autofocus
+              >${L().realLength}
+              <input id="real" type="number" step="0.01" min="0.1" placeholder=${L().egLength} autofocus
                 @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this._applyScale(num(e))} /></label>
-            <p class="hint">Medido agora: ${measured.toFixed(2)} m na escala atual.</p>
+            <p class="hint">${L().measuredNow(measured.toFixed(2))}</p>
             <button class="primary" @click=${() => this._applyScale(Number((this.renderRoot.querySelector('#real') as HTMLInputElement).value))}>
-              Aplicar escala
+              ${L().applyScale}
             </button>`
-        : html`<p class="hint">${sp.length ? 'Agora toque na outra ponta.' : 'Toque na primeira ponta.'}</p>`}
-      <button @click=${() => this._setTool('select')}>Cancelar</button>`;
+        : html`<p class="hint">${sp.length ? L().tapOtherEnd : L().tapFirstEnd}</p>`}
+      <button @click=${() => this._setTool('select')}>${L().cancel}</button>`;
   }
 
   private _panelRoom(r: RoomConfig, ri: number) {
@@ -1183,7 +1182,7 @@ export class HadashEditor extends LitElement {
     const areas = this._allAreas();
     const floorsHA = Object.values(this.hass?.floors ?? {}).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
     const groups: [string, typeof areas][] = floorsHA.length
-      ? [...floorsHA.map((f) => [f.name, areas.filter((a) => a.floor === f.floor_id)] as [string, typeof areas]), ['Sem andar', areas.filter((a) => !floorsHA.some((f) => f.floor_id === a.floor))]]
+      ? [...floorsHA.map((f) => [f.name, areas.filter((a) => a.floor === f.floor_id)] as [string, typeof areas]), [L().noFloorGroup, areas.filter((a) => !floorsHA.some((f) => f.floor_id === a.floor))]]
       : [['', areas]];
     const areaSelect = html`<select
       @change=${(e: Event) => {
@@ -1191,7 +1190,7 @@ export class HadashEditor extends LitElement {
         if (v === '__new__') this._createArea(r);
         else this._linkArea(r, v);
       }}>
-      ${opt('', '— nenhuma —', r.area ?? '')}
+      ${opt('', L().noneOption, r.area ?? '')}
       ${groups
         .filter(([, list]) => list.length)
         .map(([label, list]) =>
@@ -1199,19 +1198,19 @@ export class HadashEditor extends LitElement {
             ? html`<optgroup label=${label}>${list.map((a) => opt(a.id, a.name, r.area))}</optgroup>`
             : list.map((a) => opt(a.id, a.name, r.area)),
         )}
-      ${this.hass ? html`<option value="__new__">＋ Nova área…</option>` : nothing}
+      ${this.hass ? html`<option value="__new__">${L().newAreaOption}</option>` : nothing}
     </select>`;
     const poly = roomPoly(r);
-    return html`<h3>Cômodo</h3>
-      ${this.hass ? html`<label>Área do HA ${areaSelect}</label>` : nothing}
+    return html`<h3>${L().room}</h3>
+      ${this.hass ? html`<label>${L().haArea} ${areaSelect}</label>` : nothing}
       ${this.hass && !r.area && r.name
-        ? html`<button @click=${() => this._createAreaFor(r)}>Criar área “${r.name}” no HA</button>`
+        ? html`<button @click=${() => this._createAreaFor(r)}>${L().createAreaNamed(r.name)}</button>`
         : nothing}
       <label
-        >${r.area ? 'Nome (opcional: substitui o da área)' : 'Nome'}
+        >${r.area ? L().nameOverride : L().name}
         <input
           .value=${r.name ?? ''}
-          placeholder=${r.area ? this._areaName(r.area) : 'Nome do cômodo'}
+          placeholder=${r.area ? this._areaName(r.area) : L().roomNamePlaceholder}
           @change=${(e: Event) =>
             this._set(() => {
               const v = val(e).trim();
@@ -1220,32 +1219,31 @@ export class HadashEditor extends LitElement {
             })}
       /></label>
       ${r.area && !r.name
-        ? html`<p class="hint">O nome vem da área "${this._areaName(r.area)}": se você renomear a área no HA, muda aqui também.</p>`
+        ? html`<p class="hint">${L().nameFromArea(this._areaName(r.area))}</p>`
         : nothing}
-      ${r.area ? html`<button @click=${() => this._addAreaDevices(ri)}>Adicionar dispositivos de "${this._areaName(r.area)}"</button>` : nothing}
+      ${r.area ? html`<button @click=${() => this._addAreaDevices(ri)}>${L().addAreaDevices(this._areaName(r.area))}</button>` : nothing}
       <div class="row">
-        <label>Cor<input type="color" .value=${r.color ?? '#9fb4c7'} @change=${(e: Event) => this._set(() => (r.color = val(e)))} /></label>
+        <label>${L().color}<input type="color" .value=${r.color ?? '#9fb4c7'} @change=${(e: Event) => this._set(() => (r.color = val(e)))} /></label>
         <label
-          >Paredes (m)
+          >${L().walls}
           <input type="number" step="0.1" min="0" placeholder="1.0" .value=${r.wall_height ?? ''}
             @change=${(e: Event) => this._set(() => (r.wall_height = num(e) || undefined))} /></label>
       </div>
       ${this.hass
-        ? html`<label>Temperatura ${pick('temperature', sensors(['temperature']))}</label>
-            <label>Umidade ${pick('humidity', sensors(['humidity']))}</label>
-            <label>Presença ${pick('motion', sensors(['motion', 'occupancy', 'presence'], 'binary_sensor'))}</label>`
+        ? html`<label>${L().temperature} ${pick('temperature', sensors(['temperature']))}</label>
+            <label>${L().humidity} ${pick('humidity', sensors(['humidity']))}</label>
+            <label>${L().motion} ${pick('motion', sensors(['motion', 'occupancy', 'presence'], 'binary_sensor'))}</label>`
         : nothing}
       <p class="hint">
-        ${Math.abs(signedArea(poly)).toFixed(1)} m² · ${poly.length} cantos · ${(r.devices ?? []).length} dispositivo(s) ·
-        ${(r.openings ?? []).length} porta(s)
+        ${L().roomStats(Math.abs(signedArea(poly)).toFixed(1), poly.length, (r.devices ?? []).length, (r.openings ?? []).length)}
       </p>
-      <p class="hint">Arraste os cantos brancos para ajustar. Os pontos laranja no meio das paredes criam cantos novos.</p>
+      <p class="hint">${L().roomHint}</p>
       ${this._sel?.k === 'room' ? html`<div class="row">
         ${poly.length > 3
-          ? html`<button @click=${() => this._removeLastVertex(ri)}>Remover último canto</button>`
+          ? html`<button @click=${() => this._removeLastVertex(ri)}>${L().removeLastCorner}</button>`
           : nothing}
       </div>` : nothing}
-      <button class="danger" @click=${this._deleteSel}>Excluir cômodo</button>`;
+      <button class="danger" @click=${this._deleteSel}>${L().deleteRoom}</button>`;
   }
 
   private _removeLastVertex(ri: number) {
@@ -1257,17 +1255,17 @@ export class HadashEditor extends LitElement {
   private _panelOpening(ri: number, oi: number) {
     const o = this._rooms[ri].openings![oi];
     const links = linkedOpenings(this._rooms, ri, oi);
-    return html`<h3>Porta / passagem</h3>
+    return html`<h3>${L().doorTitle}</h3>
       <label
-        >Largura: ${o.width.toFixed(2)} m
+        >${L().width(o.width.toFixed(2))}
         <input type="range" min="0.5" max="4" step="0.05" .value=${String(o.width)}
           @input=${(e: Event) => {
             for (const [rj, oj] of links) resizeOpening(this._rooms[rj], this._rooms[rj].openings![oj], num(e));
             this.requestUpdate();
           }}
           @pointerdown=${() => this._commit()} /></label>
-      <p class="hint">Arraste a porta ao longo da parede para mudar a posição. ${links.length > 1 ? 'Ela aparece nos dois cômodos.' : ''}</p>
-      <button class="danger" @click=${this._deleteSel}>Fechar vão</button>`;
+      <p class="hint">${L().doorHint} ${links.length > 1 ? L().doorBothRooms : ''}</p>
+      <button class="danger" @click=${this._deleteSel}>${L().closeOpening}</button>`;
   }
 
   /** mais um ponto de luz da mesma tecla (ex.: vários spots no teto) */
@@ -1282,7 +1280,7 @@ export class HadashEditor extends LitElement {
     if (!pointInPoly(pos, roomPoly(r))) pos = snapP([p[0] - 0.8, p[1]]);
     r.devices!.push({ ...d, pos });
     this._sel = { k: 'device', ri: s.ri, di: r.devices!.length - 1 };
-    this._say('Ponto de luz adicionado. Arraste para o lugar do spot.');
+    this._say(L().spotAdded);
   }
 
   /** o pino é desenhado como luz? (explícito, ou tecla de interruptor por padrão) */
@@ -1296,7 +1294,7 @@ export class HadashEditor extends LitElement {
     const asLight = this._isLight(d);
     const canBeLight = !d.speaker && ['switch', 'input_boolean', 'light'].includes(domain ?? '');
     const spots = d.entity ? this._rooms.flatMap((r) => (r.devices ?? []) as DeviceConfig[]).filter((x) => x.entity === d.entity).length : 0;
-    return html`<h3>${d.speaker ? 'Caixa de som' : asLight && domain !== 'light' ? 'Luz (por interruptor)' : 'Dispositivo'}</h3>
+    return html`<h3>${d.speaker ? L().speakerTitle : asLight && domain !== 'light' ? L().switchLightTitle : L().deviceTitle}</h3>
       ${canBeLight && domain !== 'light'
         ? html`<label class="check"
             ><input type="checkbox" .checked=${asLight} @change=${(e: Event) => this._set(() => {
@@ -1304,34 +1302,34 @@ export class HadashEditor extends LitElement {
               // padrão da tecla: não grava nada; diferente do padrão: grava explícito
               d.light = on === isLightSwitch(d.entity!) ? undefined : on;
             })} />
-            Acende uma lâmpada (mostrar como luz)</label
+            ${L().lightsABulb}</label
           >`
         : nothing}
       ${asLight || domain === 'light'
-        ? html`<button @click=${this._addSpot}>+ Outro ponto de luz desta tecla</button>
-            ${spots > 1 ? html`<p class="hint">Esta tecla aparece em ${spots} pontos na planta.</p>` : nothing}`
+        ? html`<button @click=${this._addSpot}>${L().anotherSpot}</button>
+            ${spots > 1 ? html`<p class="hint">${L().spotsCount(spots)}</p>` : nothing}`
         : nothing}
       <p><b>${d.speaker ?? st?.attributes.friendly_name ?? d.entity}</b><br /><span class="hint">${d.speaker ? 'Spotify' : d.entity}</span></p>
-      <label>Nome no mapa<input placeholder="automático" .value=${d.name ?? ''} @change=${(e: Event) => this._set(() => (d.name = val(e) || undefined))} /></label>
+      <label>${L().nameOnMap}<input placeholder=${L().automatic} .value=${d.name ?? ''} @change=${(e: Event) => this._set(() => (d.name = val(e) || undefined))} /></label>
       <label
-        >Altura (m)
-        <input type="number" step="0.1" min="0.1" placeholder="automática" .value=${d.height ?? ''}
+        >${L().heightM}
+        <input type="number" step="0.1" min="0.1" placeholder=${L().automatic} .value=${d.height ?? ''}
           @change=${(e: Event) => this._set(() => (d.height = num(e) || undefined))} /></label>
-      <p class="hint">Arraste para mudar de lugar, inclusive para outro cômodo.</p>
-      <button class="danger" @click=${this._deleteSel}>Remover da planta</button>`;
+      <p class="hint">${L().deviceHint}</p>
+      <button class="danger" @click=${this._deleteSel}>${L().removeFromPlan}</button>`;
   }
 
   private _panelStairs(si: number) {
     const s = this._floor.stairs![si];
-    return html`<h3>Escada</h3>
+    return html`<h3>${L().stairsTitle}</h3>
       <label
-        >Largura: ${(s.width ?? 0.9).toFixed(2)} m
+        >${L().width((s.width ?? 0.9).toFixed(2))}
         <input type="range" min="0.6" max="2" step="0.05" .value=${String(s.width ?? 0.9)}
           @pointerdown=${() => this._commit()}
           @input=${(e: Event) => ((s.width = num(e)), this.requestUpdate())} /></label>
-      <p class="hint">A seta aponta para onde a escada sobe.</p>
-      <button @click=${() => this._set(() => ([s.from, s.to] = [s.to, s.from]))}>Inverter sentido</button>
-      <button class="danger" @click=${this._deleteSel}>Excluir escada</button>`;
+      <p class="hint">${L().stairsHint}</p>
+      <button @click=${() => this._set(() => ([s.from, s.to] = [s.to, s.from]))}>${L().flipDirection}</button>
+      <button class="danger" @click=${this._deleteSel}>${L().deleteStairs}</button>`;
   }
 
   private _panelDevices() {
@@ -1350,29 +1348,29 @@ export class HadashEditor extends LitElement {
       const isSel = pend && (pend.entity ?? `speaker:${pend.speaker}`) === (dev.entity ?? `speaker:${dev.speaker}`);
       return html`<button class="ent ${isSel ? 'sel' : ''} ${placed.has(key) ? 'placed' : ''}" @click=${() => {
         this._pending = dev;
-        this._say(`Toque na planta onde fica "${label}".`);
+        this._say(L().tapWhere(label));
       }}>
         <i style="background:${DOMAIN_COLOR[dev.speaker ? 'speaker' : key.split('.')[0]] ?? '#cfd8dc'}"></i>
         <span><b>${label}</b><small>${sub}</small></span>${placed.has(key) ? html`<em>✓</em>` : nothing}
       </button>`;
     };
     let lastArea = '\u0000';
-    return html`<h3>Dispositivos</h3>
-      <p class="hint">${pend ? 'Agora toque na planta.' : 'Escolha um item e toque na planta para colocá-lo. ✓ = já está na planta.'}</p>
-      <input class="search" type="search" placeholder="Buscar entidade…" .value=${this._q} @input=${(e: Event) => (this._q = val(e))} />
+    return html`<h3>${L().devicesTitle}</h3>
+      <p class="hint">${pend ? L().nowTapPlan : L().devicesHint}</p>
+      <input class="search" type="search" placeholder=${L().searchEntity} .value=${this._q} @input=${(e: Event) => (this._q = val(e))} />
       <div class="ents">
         ${speakers.length
-          ? html`<div class="grp">Caixas de som (Spotify)</div>
+          ? html`<div class="grp">${L().speakersGroup}</div>
               ${speakers
                 .filter((sp) => !q || sp.toLowerCase().includes(q))
-                .map((sp) => item({ speaker: sp }, sp, 'caixa', `speaker:${sp}`))}`
+                .map((sp) => item({ speaker: sp }, sp, L().speakerSub, `speaker:${sp}`))}`
           : nothing}
         ${ents.slice(0, 300).map((x) => {
-          const head = x.area !== lastArea ? html`<div class="grp">${x.area || 'Sem área'}</div>` : nothing;
+          const head = x.area !== lastArea ? html`<div class="grp">${x.area || L().noAreaGroup}</div>` : nothing;
           lastArea = x.area;
           return html`${head}${item({ entity: x.id }, x.name, x.id, x.id)}`;
         })}
-        ${!hass ? html`<p class="hint">Sem conexão com o HA.</p>` : nothing}
+        ${!hass ? html`<p class="hint">${L().noHa}</p>` : nothing}
       </div>`;
   }
 
@@ -1425,6 +1423,13 @@ export class HadashEditor extends LitElement {
       font: inherit;
       cursor: pointer;
       white-space: nowrap;
+    }
+    /* painel lateral: textos longos (en/es) quebram linha em vez de cortar */
+    aside button,
+    aside .file {
+      white-space: normal;
+      padding: 8px 12px;
+      line-height: 1.3;
     }
     button:disabled {
       opacity: 0.35;

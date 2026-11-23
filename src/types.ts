@@ -12,6 +12,8 @@ export interface Hass {
   callApi?<T = any>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, data?: Record<string, unknown>): Promise<T>;
   callService(domain: string, service: string, data?: Record<string, unknown>): Promise<unknown>;
   themes?: { darkMode?: boolean };
+  language?: string;
+  locale?: { language?: string };
   services?: Record<string, Record<string, unknown>>;
   /** registros do HA (só existem dentro do HA, não no demo) */
   areas?: Record<string, { area_id: string; name: string; floor_id?: string | null }>;

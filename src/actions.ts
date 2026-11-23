@@ -1,4 +1,5 @@
 import type { Hass, HassEntity } from './types';
+import { t } from './i18n';
 
 /** script, cena ou automação do HA, como o painel de ações mostra */
 export interface ActionItem {
@@ -84,16 +85,17 @@ export function forgetTargets() {
 
 /** "há 3 min", "há 2 h", "ontem"… */
 export function ago(iso?: string): string {
-  if (!iso) return 'nunca';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return 'nunca';
-  const m = Math.round((Date.now() - t) / 60000);
-  if (m < 1) return 'agora';
-  if (m < 60) return `há ${m} min`;
+  const tr = t();
+  if (!iso) return tr.never;
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return tr.never;
+  const m = Math.round((Date.now() - at) / 60000);
+  if (m < 1) return tr.justNow;
+  if (m < 60) return tr.minutesAgo(m);
   const h = Math.round(m / 60);
-  if (h < 24) return `há ${h} h`;
+  if (h < 24) return tr.hoursAgo(h);
   const d = Math.round(h / 24);
-  return d === 1 ? 'ontem' : `há ${d} dias`;
+  return d === 1 ? tr.yesterday : tr.daysAgo(d);
 }
 
 export async function runAction(hass: Hass, it: ActionItem) {
