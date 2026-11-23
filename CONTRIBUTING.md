@@ -18,15 +18,15 @@ Nothing is pushed straight to `main` or `develop`: every change goes through a p
 
 ```bash
 npm install
-npm test          # sky, geometry, area sync and action tests
+npm test          # sky, geometry, area sync, action and i18n tests
 npm run build     # outputs dist/hadash-card.js
-npm run dev       # demo with a fake Home Assistant on http://localhost:5181
+npm run dev       # demo with a fake Home Assistant on http://localhost:5181 (?lang=en, pt-BR or es)
 npm run ha        # rebuild on change and serve on http://<your-machine-ip>:5182/hadash-card.js
 ```
 
 To try your build in Home Assistant, add the `npm run ha` URL as a dashboard resource on a test dashboard. Then refresh HA after each change.
 
-The UI is in Brazilian Portuguese for now. Translations (English and Spanish, as in the other cards) are welcome.
+UI strings live in [`src/i18n.ts`](src/i18n.ts). Please add every new string to all languages (English, Brazilian Portuguese and Spanish).
 
 The music panel comes from [spotify-panel-card](https://github.com/peter-gabriel/spotify-panel-card) as an npm dependency pinned to a release tag. To work on both at once, point the dependency at a local checkout (`npm i ../spotify-panel-card`) and do not commit that change.
 

@@ -129,24 +129,6 @@ export function computeSky(elevation: number | undefined, belowHorizon: boolean,
   };
 }
 
-/** condição do tempo em português */
-export const WEATHER_PT: Record<string, string> = {
-  sunny: 'Ensolarado',
-  'clear-night': 'Céu limpo',
-  partlycloudy: 'Parcialmente nublado',
-  cloudy: 'Nublado',
-  windy: 'Ventando',
-  'windy-variant': 'Ventando e nublado',
-  fog: 'Neblina',
-  rainy: 'Chuva',
-  pouring: 'Chuva forte',
-  lightning: 'Raios',
-  'lightning-rainy': 'Tempestade',
-  snowy: 'Neve',
-  'snowy-rainy': 'Chuva e neve',
-  hail: 'Granizo',
-  exceptional: 'Tempo instável',
-};
 
 /** caminho do ícone (24x24) para a condição */
 export function weatherIcon(state: string, night: boolean): string {

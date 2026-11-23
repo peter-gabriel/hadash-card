@@ -1,4 +1,5 @@
 import type { Device } from './house';
+import { t } from './i18n';
 import type { HassEntity } from './types';
 
 export interface Visual {
@@ -78,7 +79,7 @@ function lightColor(a: Record<string, any>): string {
 
 /** "Sala Teto" dentro da Sala vira só "Teto" */
 export function deviceName(d: Device, roomName: string, st?: HassEntity): string {
-  if (d.domain === 'speaker') return d.name ?? d.speaker ?? 'Caixa';
+  if (d.domain === 'speaker') return d.name ?? d.speaker ?? t().speakerTitle;
   const full: string = d.name ?? st?.attributes.friendly_name ?? d.entity.split('.')[1].replace(/_/g, ' ');
   if (d.name) return full;
   const re = new RegExp(`^${roomName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+`, 'i');
@@ -86,48 +87,26 @@ export function deviceName(d: Device, roomName: string, st?: HassEntity): string
   return short ? short[0].toUpperCase() + short.slice(1) : full;
 }
 
-const PT: Record<string, string> = {
-  on: 'ligado',
-  off: 'desligado',
-  open: 'aberto',
-  closed: 'fechado',
-  opening: 'abrindo',
-  closing: 'fechando',
-  playing: 'tocando',
-  paused: 'pausado',
-  idle: 'ocioso',
-  standby: 'standby',
-  heat: 'aquecendo',
-  cool: 'resfriando',
-  heat_cool: 'auto',
-  auto: 'auto',
-  dry: 'desumidificar',
-  fan_only: 'ventilar',
-  locked: 'trancado',
-  unlocked: 'destrancado',
-  unavailable: 'indisponível',
-  unknown: '?',
-};
 
 export function speakerText(st: HassEntity | undefined, speaker?: string): string {
-  if (!speakerIsCurrent(st, speaker)) return 'toque para tocar aqui';
+  if (!speakerIsCurrent(st, speaker)) return t().tapToPlayHere;
   const a = st!.attributes;
   const what = [a.media_title, a.media_artist].filter(Boolean).join(' · ');
-  if (st!.state === 'playing') return what ? `▶ ${what}` : 'tocando';
-  return what ? `❚❚ ${what}` : 'pausado';
+  if (st!.state === 'playing') return what ? `▶ ${what}` : t().states.playing;
+  return what ? `❚❚ ${what}` : t().states.paused;
 }
 
 export function stateText(st?: HassEntity): string {
-  if (!st) return 'não encontrado';
+  if (!st) return t().notFound;
   const domain = st.entity_id.split('.')[0];
   const a = st.attributes;
   if (domain === 'light' && st.state === 'on' && typeof a.brightness === 'number')
     return `${Math.round(a.brightness / 2.55)}%`;
-  if (domain === 'climate' && st.state !== 'off' && a.temperature != null) return `${PT[st.state] ?? st.state} · ${a.temperature}°`;
+  if (domain === 'climate' && st.state !== 'off' && a.temperature != null) return `${t().states[st.state] ?? st.state} · ${a.temperature}°`;
   if (domain === 'binary_sensor' && ['door', 'window', 'opening', 'garage_door'].includes(a.device_class))
-    return st.state === 'on' ? 'aberta' : 'fechada';
+    return st.state === 'on' ? t().doorOpen : t().doorClosed;
   if (domain === 'sensor') return `${st.state}${a.unit_of_measurement ? ' ' + a.unit_of_measurement : ''}`;
-  return PT[st.state] ?? st.state;
+  return t().states[st.state] ?? st.state;
 }
 
 /** o que um toque rápido faz; undefined = abrir o more-info */

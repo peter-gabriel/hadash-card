@@ -1,4 +1,5 @@
 import type { CardConfig, DeviceConfig, FloorConfig, OpeningConfig, RoomConfig, StairConfig, Vec2 } from './types';
+import { t } from './i18n';
 
 export interface Device {
   entity: string;
@@ -24,9 +25,9 @@ export function buildFloors(cfg: CardConfig): Floor[] {
   const fh = cfg.floor_height ?? 2.9;
   const list: FloorConfig[] = cfg.floors?.length
     ? cfg.floors
-    : [{ name: 'Casa', rooms: cfg.rooms?.length ? cfg.rooms : [] }];
+    : [{ name: t().home, rooms: cfg.rooms?.length ? cfg.rooms : [] }];
   const fallback = !cfg.floors?.length && !cfg.rooms?.length;
-  const src = fallback ? DEMO_FLOORS : list;
+  const src = fallback ? demoFloors() : list;
   const used = new Set<string>();
   return src.map((f, index) => ({
     index,
@@ -133,7 +134,7 @@ function roomPolygon(rc: RoomConfig): Vec2[] {
       [x, y + d],
     ];
   }
-  throw new Error(`hadash-card: cômodo "${rc.name ?? rc.area}" precisa de \`rect\` ou \`polygon\`.`);
+  throw new Error(t().errRoomShape(String(rc.name ?? rc.area)));
 }
 
 type Areas = Record<string, { name: string }> | undefined;
@@ -141,12 +142,12 @@ type Areas = Record<string, { name: string }> | undefined;
 /** tecla de interruptor de parede (switch.*_l1, _l2…) ou nome de luz: provavelmente acende uma lâmpada */
 export function isLightSwitch(entity: string, name?: string): boolean {
   if (!/^switch\./.test(entity)) return false;
-  return /_l\d+$/.test(entity) || /\b(luz|luzes|light|lamp|lâmpada|led|spot|lustre|pendente|abajur)\b/i.test(name ?? '');
+  return /_l\d+$/.test(entity) || /(^|[^\p{L}])(luz|luzes|luces|lights?|lamps?|lâmpada|lámpara|bombilla|foco|led|spots?|lustre|pendente|abajur)([^\p{L}]|$)/iu.test(name ?? '');
 }
 
 /** nome mostrado: o próprio, senão o da área do HA, senão o id da área */
 export function roomLabel(r: { name?: string; area?: string }, areas?: Areas): string {
-  return r.name || (r.area && areas?.[r.area]?.name) || r.area || 'Cômodo';
+  return r.name || (r.area && areas?.[r.area]?.name) || r.area || t().room;
 }
 
 export function bounds(poly: Vec2[]): [number, number, number, number] {
@@ -209,6 +210,16 @@ function slug(s: string): string {
 }
 
 /** sobrado de exemplo (o seu entra via YAML em `floors:` ou `rooms:`) */
+/** casa de exemplo com os nomes no idioma atual */
+export function demoFloors(): FloorConfig[] {
+  const names = t().demo;
+  return DEMO_FLOORS.map((f) => ({
+    ...f,
+    name: names[f.name] ?? f.name,
+    rooms: f.rooms.map((r) => ({ ...r, name: r.name && (names[r.name] ?? r.name) })),
+  }));
+}
+
 export const DEMO_FLOORS: FloorConfig[] = [
   {
     name: 'Térreo',
